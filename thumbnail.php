@@ -1958,9 +1958,8 @@ function createThumb($src, $width, $height)
         header("Last-Modified: " . gmdate("D, d M Y H:i:s", $last_modified_time) . " GMT");
         header('Etag: ' . $etag);
         if (is_readable($tmp)) {
-            $image = new SimpleImage();
-            $image->fromFile($tmp);
-            $image->toScreen();
+            header('Content-Type: ' . 'image/webp');
+            echo @file_get_contents($tmp);
         } else {
             $image = new SimpleImage();
             $image->fromFile($src);
