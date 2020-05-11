@@ -1968,7 +1968,7 @@ function createThumb($src, $width, $height)
                 $image = new SimpleImage();
                 $image->fromFile($newSrc);
             }
-            unlink($newSrc);
+            // unlink($newSrc);
             $image->thumbnail($width, $height);
             $image->toFile($tmp, null, 95);
             $image->toScreen();
