@@ -1945,6 +1945,9 @@ function createThumb($src, $width, $height)
     $tmpDirectory = "./.tmp";
     $tmp = "$tmpDirectory/$etag";
     $last_modified_time = filemtime($src);
+    if (!is_dir($tmpDirectory)) {
+        mkdir($tmpDirectory, 0755);
+    }
     if (
         @strtotime($_SERVER['HTTP_IF_MODIFIED_SINCE']) == $last_modified_time ||
         @trim($_SERVER['HTTP_IF_NONE_MATCH']) == $etag
@@ -1968,7 +1971,7 @@ function createThumb($src, $width, $height)
                 $image = new SimpleImage();
                 $image->fromFile($newSrc);
             }
-            // unlink($newSrc);
+            unlink($newSrc);
             $image->thumbnail($width, $height);
             $image->toFile($tmp, null, 95);
             $image->toScreen();
