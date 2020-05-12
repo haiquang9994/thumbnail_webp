@@ -49,7 +49,7 @@ class SimpleImage
             // Ignore JPEG warnings that cause imagecreatefromjpeg() to fail
             ini_set('gd.jpeg_ignore_warning', 1);
         } else {
-            throw new \Exception('Required extension GD is not loaded.', self::ERR_GD_NOT_ENABLED);
+            throw new Exception('Required extension GD is not loaded.', self::ERR_GD_NOT_ENABLED);
         }
 
         // Load an image through the constructor
@@ -86,13 +86,13 @@ class SimpleImage
         // Basic formatting check
         preg_match('/^data:(.*?);/', $uri, $matches);
         if (!count($matches)) {
-            throw new \Exception('Invalid data URI.', self::ERR_INVALID_DATA_URI);
+            throw new Exception('Invalid data URI.', self::ERR_INVALID_DATA_URI);
         }
 
         // Determine mime type
         $this->mimeType = $matches[1];
         if (!preg_match('/^image\/(gif|jpeg|png)$/', $this->mimeType)) {
-            throw new \Exception(
+            throw new Exception(
                 'Unsupported format: ' . $this->mimeType,
                 self::ERR_UNSUPPORTED_FORMAT
             );
@@ -102,7 +102,7 @@ class SimpleImage
         $uri = base64_decode(preg_replace('/^data:(.*?);base64,/', '', $uri));
         $this->image = imagecreatefromstring($uri);
         if (!$this->image) {
-            throw new \Exception("Invalid image data.", self::ERR_INVALID_IMAGE);
+            throw new Exception("Invalid image data.", self::ERR_INVALID_IMAGE);
         }
 
         return $this;
@@ -121,16 +121,16 @@ class SimpleImage
         // because not all URL wrappers support the latter.
         $handle = @fopen($file, 'r');
         if ($handle === false) {
-            throw new \Exception("File not found: $file", self::ERR_FILE_NOT_FOUND);
+            throw new Exception("File not found: $file", self::ERR_FILE_NOT_FOUND);
         }
         fclose($handle);
 
         // Get image info
-        $info = getimagesize($file);
-        if ($info === false) {
-            throw new \Exception("Invalid image file: $file", self::ERR_INVALID_IMAGE);
+        $mimeType = mime_content_type($file);
+        if (!in_array($mimeType, ['image/gif', 'image/jpeg', 'image/png', 'image/webp', 'image/bmp', 'image/x-ms-bmp', 'image/x-windows-bmp'])) {
+            throw new Exception("Invalid image file: $file", self::ERR_INVALID_IMAGE);
         }
-        $this->mimeType = $info['mime'];
+        $this->mimeType = $mimeType;
 
         // Create image object from file
         switch ($this->mimeType) {
@@ -166,7 +166,7 @@ class SimpleImage
                 break;
         }
         if (!$this->image) {
-            throw new \Exception("Unsupported format: " . $this->mimeType, self::ERR_UNSUPPORTED_FORMAT);
+            throw new Exception("Unsupported format: " . $this->mimeType, self::ERR_UNSUPPORTED_FORMAT);
         }
 
         // Convert pallete images to true color images
@@ -258,7 +258,7 @@ class SimpleImage
             case 'image/webp':
                 // Not all versions of PHP will have webp support enabled
                 if (!function_exists('imagewebp')) {
-                    throw new \Exception(
+                    throw new Exception(
                         'WEBP support is not enabled in your version of PHP.',
                         self::ERR_WEBP_NOT_ENABLED
                     );
@@ -273,7 +273,7 @@ class SimpleImage
                 imagebmp($this->image, null, $quality);
                 break;
             default:
-                throw new \Exception('Unsupported format: ' . $mimeType, self::ERR_UNSUPPORTED_FORMAT);
+                throw new Exception('Unsupported format: ' . $mimeType, self::ERR_UNSUPPORTED_FORMAT);
         }
 
         // Stop capturing
@@ -343,7 +343,7 @@ class SimpleImage
 
         // Save the image to file
         if (!file_put_contents($file, $image['data'])) {
-            throw new \Exception("Failed to write image to file: $file", self::ERR_WRITE);
+            throw new Exception("Failed to write image to file: $file", self::ERR_WRITE);
         }
 
         return $this;
@@ -927,7 +927,7 @@ class SimpleImage
     {
         // Check for freetype support
         if (!function_exists('imagettftext')) {
-            throw new \Exception(
+            throw new Exception(
                 'Freetype support is not enabled in your version of PHP.',
                 self::ERR_FREETYPE_NOT_ENABLED
             );
@@ -967,7 +967,7 @@ class SimpleImage
         //
         $box = imagettfbbox($size, $angle, $fontFile, $text);
         if (!$box) {
-            throw new \Exception("Unable to load font file: $fontFile", self::ERR_FONT_FILE);
+            throw new Exception("Unable to load font file: $fontFile", self::ERR_FONT_FILE);
         }
         $boxWidth = abs($box[6] - $box[2]);
         $boxHeight = $options['size'];
@@ -1709,52 +1709,6 @@ class SimpleImage
     }
 
     //
-    // Extracts colors from an image like a human would do.™ This method requires the third-party
-    // library \League\ColorExtractor. If you're using Composer, it will be installed for you
-    // automatically.
-    //
-    //  $count (int) - The max number of colors to extract (default 5).
-    //  $backgroundColor (string|array) - By default any pixel with alpha value greater than zero will
-    //    be discarded. This is because transparent colors are not perceived as is. For example, fully
-    //    transparent black would be seen white on a white background. So if you want to take
-    //    transparency into account, you have to specify a default background color.
-    //
-    // Returns an array of RGBA colors arrays.
-    //
-    public function extractColors($count = 5, $backgroundColor = null)
-    {
-        // Check for required library
-        if (!class_exists('\League\ColorExtractor\ColorExtractor')) {
-            throw new \Exception(
-                'Required library \League\ColorExtractor is missing.',
-                self::ERR_LIB_NOT_LOADED
-            );
-        }
-
-        // Convert background color to an integer value
-        if ($backgroundColor) {
-            $backgroundColor = self::normalizeColor($backgroundColor);
-            $backgroundColor = \League\ColorExtractor\Color::fromRgbToInt([
-                'r' => $backgroundColor['red'],
-                'g' => $backgroundColor['green'],
-                'b' => $backgroundColor['blue']
-            ]);
-        }
-
-        // Extract colors from the image
-        $palette = \League\ColorExtractor\Palette::fromGD($this->image, $backgroundColor);
-        $extractor = new \League\ColorExtractor\ColorExtractor($palette);
-        $colors = $extractor->extract($count);
-
-        // Convert colors to an RGBA color array
-        foreach ($colors as $key => $value) {
-            $colors[$key] = self::normalizeColor(\League\ColorExtractor\Color::fromIntToHex($value));
-        }
-
-        return $colors;
-    }
-
-    //
     // Gets the RGBA value of a single pixel.
     //
     //  $x* (int) - The horizontal position of the pixel.
@@ -1892,7 +1846,7 @@ class SimpleImage
                     $hex[4] . $hex[5]
                 ];
             } else {
-                throw new \Exception("Invalid color value: $color", self::ERR_INVALID_COLOR);
+                throw new Exception("Invalid color value: $color", self::ERR_INVALID_COLOR);
             }
 
             // Turn color into an array
@@ -1922,20 +1876,23 @@ class SimpleImage
             ];
         }
 
-        throw new \Exception("Invalid color value: $color", self::ERR_INVALID_COLOR);
+        throw new Exception("Invalid color value: $color", self::ERR_INVALID_COLOR);
     }
 }
 
 function convertImageToWebP($source, $destination, $quality = 80)
 {
     $extension = pathinfo($source, PATHINFO_EXTENSION);
-    if ($extension == 'jpeg' || $extension == 'jpg')
-        $image = imagecreatefromjpeg($source);
-    elseif ($extension == 'gif')
-        $image = imagecreatefromgif($source);
-    elseif ($extension == 'png')
-        $image = imagecreatefrompng($source);
-    return imagewebp($image, $destination, $quality);
+    if ($extension == 'gif') {
+        copy($source, $destination);
+    } else {
+        if ($extension == 'jpeg' || $extension == 'jpg') {
+            $image = @imagecreatefromjpeg($source);
+        } elseif ($extension == 'png') {
+            $image = @imagecreatefrompng($source);
+        }
+        @imagewebp($image, $destination, $quality);
+    }
 }
 
 function createThumb($src, $width, $height)
@@ -1943,8 +1900,10 @@ function createThumb($src, $width, $height)
     $src = './' . ltrim($src, '/');
     $etag = md5($src . '_' . $width . '_' . $height);
     $tmpDirectory = "./.tmp";
-    $tmp = "$tmpDirectory/$etag";
     $last_modified_time = filemtime($src);
+    $webp_supported = array_key_exists('webp_supported', $_COOKIE) ? boolval($_COOKIE['webp_supported']) : true;
+    $tmp = $webp_supported ? ("$tmpDirectory/$etag" . '_webp') : "$tmpDirectory/$etag";
+    header('Webp-Supported: ' . ($webp_supported ? 'true' : 'false'));
     if (!is_dir($tmpDirectory)) {
         mkdir($tmpDirectory, 0755);
     }
@@ -1958,34 +1917,49 @@ function createThumb($src, $width, $height)
         header("Last-Modified: " . gmdate("D, d M Y H:i:s", $last_modified_time) . " GMT");
         header('Etag: ' . $etag);
         if (is_readable($tmp)) {
-            header('Content-Type: ' . 'image/webp');
+            $extension = pathinfo($src, PATHINFO_EXTENSION);
+            if ($webp_supported) {
+                if ($extension == 'gif') {
+                    header('Content-Type: ' . 'image/gif');
+                } else {
+                    header('Content-Type: ' . 'image/webp');
+                }
+            } else {
+                if ($extension == 'jpg') {
+                    $extension = 'jpeg';
+                }
+                header('Content-Type: ' . "image/$extension");
+            }
             echo @file_get_contents($tmp);
         } else {
             $image = new SimpleImage();
             $image->fromFile($src);
-            if ('image/webp' != $image->getMimeType()) {
-                $newSrc = $tmp . '.webp';
-                convertImageToWebP($src, $newSrc, 100);
-                $src = $newSrc;
-                $image = new SimpleImage();
-                $image->fromFile($newSrc);
+            if ($webp_supported) {
+                $mimeType = $image->getMimeType();
+                if ('image/webp' != $mimeType && 'image/gif' != $mimeType && function_exists('imagewebp')) {
+                    $newSrc = $tmp . '.webp';
+                    convertImageToWebP($src, $newSrc, 100);
+                    $src = $newSrc;
+                    $image = new SimpleImage();
+                    $image->fromFile($newSrc);
+                    unlink($newSrc);
+                }
             }
-            unlink($newSrc);
+            if ($width || $height) {
+                if (!$width) {
+                    $width = $height * $image->getWidth() / $image->getHeight();
+                } elseif (!$height) {
+                    $height = $width * $image->getHeight() / $image->getWidth();
+                }
+            }
             $image->thumbnail($width, $height);
-            $image->toFile($tmp, null, 95);
+            $image->toFile($tmp, null, 88);
             $image->toScreen();
         }
     }
 }
 
-// Not all versions of PHP will have webp support enabled
-if (!function_exists('imagewebp')) {
-    throw new Exception(
-        'WEBP support is not enabled in your version of PHP.'
-    );
-}
-
 $src = array_key_exists('src', $_GET) ? $_GET['src'] : '';
-$width = array_key_exists('w', $_GET) ? $_GET['w'] : '';
-$height = array_key_exists('h', $_GET) ? $_GET['h'] : '';
+$width = array_key_exists('w', $_GET) ? $_GET['w'] : null;
+$height = array_key_exists('h', $_GET) ? $_GET['h'] : null;
 createThumb($src, $width, $height);

@@ -1,12 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WebP</title>
+    <script>function a1() { var e = {}; return document.cookie.split(";").map((function (t) { var a = t.trim().split("="); "" != a[0] && (e[a[0]] = a[1] || void 0) })), e } function a2(e, t) { var a = new Date; void 0 === t ? a.setTime(a.getTime() - 1) : a.setTime(a.getTime() + 2592e6), document.cookie = e + "=" + t + "; expires=" + a.toUTCString() } function a3() { var e = document.createElement("canvas"); return !(!e.getContext || !e.getContext("2d")) && 0 == e.toDataURL("image/webp").indexOf("data:image/webp") } var cks = a1(), webp_supported = cks.webp_supported; void 0 === webp_supported && a2("webp_supported", a3() ? 1 : 0);</script>
 </head>
+
 <body>
-    <img src="/uploads/slideshow/banner-k.jpg" alt="">
-    <img src="/thumbc_1500_450/uploads/slideshow/banner-k.jpg" alt="">
+    <img class="lazy" data-src="/uploads/slideshow/banner-k.jpg" alt="">
+    <img class="lazy" data-src="/thumbc_1500_450/uploads/slideshow/banner-k.jpg" alt="">
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            $('.lazy').each(function () {
+                var img = $(this)
+                var src = img.data('src')
+                img.attr('src', src)
+            })
+        })
+    </script>
 </body>
+
 </html>
